@@ -28,13 +28,16 @@ public class Cliente {
             Socket s = new Socket("localhost", 4567);
             
             BancoStub b = new BancoStub(s);
-            b.addConta(100);
-            b.addConta(200);
+            
+            int saldo = 0;
             for(int i = 0; i < 100000; i++){
-                b.movimento(0,1, 10);
+                
+                if(b.addBalance(0,10)){
+                    saldo += 10;
+                }
                 //b.movimento(1,0, 10);
             }
-            System.out.println(b.getBalanceAccount(0));
+            System.out.println("Saldo Real: " + b.getBalanceAccount(0) + "\nSaldo local: " + saldo);
             
         } catch (Exception ex) {
             Logger.getLogger(Cliente.class.getName()).log(Level.SEVERE, null, ex);

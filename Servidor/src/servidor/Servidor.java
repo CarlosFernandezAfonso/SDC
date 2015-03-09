@@ -8,6 +8,8 @@ package servidor;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -26,15 +28,15 @@ public class Servidor {
         // TODO code application logic here
         
         Banco bancoServer = new Banco();
-        
+        bancoServer.addConta(0);
         try{
             ServerSocket serverSocket = new ServerSocket(4567);
             int n = 0;
             while(true){
                 Socket clientSocket = serverSocket.accept();
-                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                ThreadCliente tc = new ThreadCliente(out, in, n, bancoServer);
+                ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+                ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+                ThreadCliente1 tc = new ThreadCliente1(out, in, n, bancoServer);
                 n = n +1;
                 Thread t = new Thread(tc);
                 t.start();
