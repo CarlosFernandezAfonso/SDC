@@ -20,28 +20,43 @@ import Operacoes.*;
 import Respostas.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import net.sf.jgcs.ClosedSessionException;
 import net.sf.jgcs.DataSession;
+import net.sf.jgcs.GroupException;
 import net.sf.jgcs.Message;
+import net.sf.jgcs.MessageListener;
+import net.sf.jgcs.Protocol;
+import net.sf.jgcs.ip.IpGroup;
+import net.sf.jgcs.ip.IpProtocolFactory;
 
 /**
  *
  * @author Carlos
  */
-public class BancoStub {
+public class BancoStub implements MessageListener {
 
     DataSession ds;
     Resposta resposta = null;
     
     
-    public BancoStub(DataSession s){
-        this.ds = ds;
+    public BancoStub() {
+        try{
+            IpProtocolFactory pf = new IpProtocolFactory();
+            IpGroup gc = new IpGroup("225.1.2.3:12345");
+            Protocol p = pf.createProtocol();
+            this.ds = p.openDataSession(gc);   
+            this.ds.setMessageListener((MessageListener) this); 
+        }
+        catch(Exception ex){
+            
+        }
+        
     }
+    
     
     public Integer addConta(int saldo) throws IOException, ClassNotFoundException, InterruptedException{
         Op_AddConta op = new Op_AddConta(saldo);
-        Message msg = ds.createMessage();
-        msg.setPayload(toByte(op));
-        ds.multicast(msg, null, null);
+        writeMsgMultiCast(op);
 
         while(resposta == null){
             wait();
@@ -52,11 +67,8 @@ public class BancoStub {
     
     public boolean movimento(Integer retiro, Integer destino, int valor) throws IOException, ClassNotFoundException, InterruptedException{ 
         Op_Movimento op = new Op_Movimento(retiro, destino, valor);
+        writeMsgMultiCast(op);
         
-        Message msg = ds.createMessage();
-        msg.setPayload(toByte(op));
-        ds.multicast(msg, null, null);
-
         while(resposta == null){
             wait();
         }
@@ -67,9 +79,7 @@ public class BancoStub {
         
     public Integer getBalanceAccount(int id) throws IOException, ClassNotFoundException, InterruptedException{       
         Op_Balance op = new Op_Balance(id);
-        Message msg = ds.createMessage();
-        msg.setPayload(toByte(op));
-        ds.multicast(msg, null, null);
+        writeMsgMultiCast(op);
 
         while(resposta == null){
             wait();
@@ -82,9 +92,7 @@ public class BancoStub {
     
     public boolean addBalance(int id, int saldo) throws IOException, ClassNotFoundException, InterruptedException{       
         Op_Deposito_Levantamento op = new Op_Deposito_Levantamento(id, saldo);
-        Message msg = ds.createMessage();
-        msg.setPayload(toByte(op));
-        ds.multicast(msg, null, null);
+        writeMsgMultiCast(op);
 
         while(resposta == null){
             wait();
@@ -96,6 +104,14 @@ public class BancoStub {
     }
     
     
+    
+    
+    
+    public void writeMsgMultiCast(Operacao ope) throws GroupException, IOException{
+        Message msg = ds.createMessage();
+        msg.setPayload(toByte(ope));
+        ds.multicast(msg, null, null);
+    }
     
     public byte[] toByte(Operacao o) throws IOException{
         
@@ -116,11 +132,21 @@ public class BancoStub {
         return (Resposta) ois.readObject();
         
     }
-    
-    public Resposta onMessage(Message m) throws IOException, ClassNotFoundException{
-        byte[] array = m.getPayload();
+
+    @Override
+    public Object onMessage(Message msg) {
+        byte[] array = msg.getPayload();
+        try{
+          resposta = toResposta(array);  
+        }
+        catch(ClassNotFoundException e){
+            //retorna
+        } catch (IOException ex) {
+            Logger.getLogger(BancoStub.class.getName()).log(Level.SEVERE, null, ex);
+        }
         
-        
-        return toResposta(array);
+        return null;
     }
+      
+    
 }
